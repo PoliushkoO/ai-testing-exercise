@@ -1,34 +1,47 @@
-import openai
-import pandas as pd
 import os
-import dotenv
+import pandas as pd
+import openai
+from dotenv import load_dotenv
 
-# Load environment variables from .env file
-dotenv.load_dotenv()
+# Load environment variables
+load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-openai.api_key = OPENAI_API_KEY
+# Directories
+INPUT_FILE = "test_input/input.csv"
+OUTPUT_FILE = "test_results/output.csv"
+PROMPT_FILE = "test_input/prompt.txt"
+
+# Ensure output directory exists
+os.makedirs("test_results", exist_ok=True)
+
+def load_prompt():
+    """Load system prompt from a file."""
+    with open(PROMPT_FILE, "r", encoding="utf-8") as file:
+        return file.read()
 
 def extract_attributes(chat_history, prompt):
-    """Sends a request to OpenAI's ChatCompletion API to extract attributes."""
+    """Send request to OpenAI API and extract attributes."""
     client = openai.OpenAI()  # Create an OpenAI client instance
 
     response = client.chat.completions.create(
-        model="gpt-4",  # Ensure you specify the correct model
+        model="gpt-4",
         messages=[
             {"role": "system", "content": prompt},
             {"role": "user", "content": chat_history}
         ]
     )
 
-    # Extract response content
-    extracted_data = response.choices[0].message.content
-    return extracted_data
+    return response.choices[0].message.content.strip()
+
+def evaluate_results(expected, actual):
+    """Compare expected vs actual attributes and return match status."""
+    return "TRUE" if expected == actual else "FALSE"
 
 def main():
-    INPUT_FILE = "test_input/input.csv"
-    OUTPUT_FILE = "test_results/output.csv"
-    PROMPT_FILE = "test_input/prompt.txt"
+    """Main script to run the data-driven test."""
+    prompt = load_prompt()
+    results = []
 
     # Read input CSV
     df = pd.read_csv(INPUT_FILE)
@@ -37,23 +50,13 @@ def main():
     if "chat_history" not in df.columns or "expected_attributes" not in df.columns:
         raise KeyError("CSV file must contain 'chat_history' and 'expected_attributes' columns")
 
-    # Read system prompt from prompt.txt
-    with open(PROMPT_FILE, "r", encoding="utf-8") as f:
-        prompt = f.read()
-
-    results = []
-
     for _, row in df.iterrows():
         chat_history = row["chat_history"]
         expected_attributes = row["expected_attributes"]
 
-        # Call OpenAI API to extract attributes
         actual_attributes = extract_attributes(chat_history, prompt)
+        match_status = evaluate_results(expected_attributes, actual_attributes)
 
-        # Compare expected vs actual
-        match_status = "TRUE" if actual_attributes == expected_attributes else "FALSE"
-
-        # Store result
         results.append([chat_history, expected_attributes, actual_attributes, match_status])
 
     # Save results to CSV
