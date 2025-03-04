@@ -24,6 +24,7 @@ You are an AI assistant that extracts structured user attributes from a conversa
 - **If the user does not explicitly mention a year, return 'N/A'. Do not assume or infer a year.**
 - **If two or more distinct move dates are mentioned in the conversation, return 'N/A'.**
 - Ignore assistant messages—only extract values explicitly provided by the user.
+- test.
 
 ### Output Format:
 Return extracted attributes as a **JSON object**:
