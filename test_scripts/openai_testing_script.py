@@ -45,11 +45,33 @@ def extract_attributes(chat_history, prompt):
 
     # Extract individual attributes safely
     email = extracted_data.get("email", "N/A")
-    phone = extracted_data.get("phone", "N/A")
+
+    # Ensure phone is always a list, even if only one number is provided
+    phone_numbers = extracted_data.get("phone", [])
+    if isinstance(phone_numbers, str):
+        phone_numbers = [phone_numbers]
+
+    # Format phone numbers correctly
+    formatted_phone = ", ".join(phone_numbers) if phone_numbers else "N/A"
+
     move_date = extracted_data.get("move_date", "N/A")
 
+    # Enforce "only one valid move date" rule
+    if isinstance(move_date, list):  # If model returns a list of dates
+        if len(set(move_date)) > 1:  # Multiple distinct dates detected
+            move_date = "N/A"
+        else:
+            move_date = move_date[0]  # Keep the single valid date
+
+    elif isinstance(move_date, str) and "," in move_date:  # If model returns comma-separated dates
+        dates = set(move_date.split(","))
+        if len(dates) > 1:
+            move_date = "N/A"
+        else:
+            move_date = list(dates)[0].strip()
+
     # Format as required: Email: ... | Phone: ... | Move date: ...
-    formatted_output = f"Email: {email} | Phone: {phone} | Move date: {move_date}"
+    formatted_output = f"Email: {email} | Phone: {formatted_phone} | Move date: {move_date}"
 
     return formatted_output
 
